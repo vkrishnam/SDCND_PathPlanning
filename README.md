@@ -59,9 +59,11 @@ A really helpful resource for doing this project and creating smooth trajectorie
 
 
 ---
-#### Overall Approach for the solution 
+## Overall Approach for the solution 
 Follows the approach discussed in the Project walkthrough Q&A Video, but improvises with lane change with the logic of evaluation of multiple trajectories and their costs with different cost functions.  
 
+Always looks for obstacles in the current lane from sensor fusion data. If found one, reduces the vehicle speed and lane change evaluation logic is enabled.
+When lane change logic is enabled, mutliple possble lanes are considered and trajectories are created. Later on each of those trajectories are further evaluated for possible collisions etc using different cost functions. Finally the trajectory whose cost is lowest is choosen and lane change is executed.
 
 ## Dependencies
 
