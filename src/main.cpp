@@ -216,7 +216,7 @@ int main() {
   bool keep_lane = true;
   bool lane_change_done = false;
 
-  double ref_vel = 0.0;//49.5; //mph
+  double ref_vel = 49.5; //mph
   bool eval_lane_change = false;
   int  decided_lane_change = -1;
 
@@ -266,53 +266,51 @@ int main() {
 		  car_s = end_path_s;
                 }
 
+                ref_vel = 49.5;//little less than 50 mph
+
                 bool too_close = false;
-                
-                
+                double closestDist_s = 100000;
                 //find ref_v to use
-                //double closestDist_s = 100000;
                 for(int i = 0; i < sensor_fusion.size(); i++)
                 {
-                   //car is in my lane
+                   // find if any car is in the current lane upto distance of 30 meters
+                   // then one might need to slow down to follow the car in the front 
+                   // and also initiate lane change and there by evaluate diff trajectories for lane change
                    float d = sensor_fusion[i][6];
+                   //if car is in current lane   
                    if(d < (2+4*lane+2) && d > (2+4*lane-2) )
                    {
-                      double vx = sensor_fusion[i][3];
-                      double vy = sensor_fusion[i][4];
+                      double vx = sensor_fusion[i][3]; //x 
+                      double vy = sensor_fusion[i][4]; //y
                       double check_speed = sqrt(vx*vx+vy*vy);
                       double check_car_s = sensor_fusion[i][5];
 
 		      check_car_s += ((double)prev_size*0.02*check_speed);
                       //check s values greater than mine and s gap
-                      if((check_car_s > car_s) && ((check_car_s - car_s) < 30))
+                      if((check_car_s > car_s) && ((check_car_s - car_s) < 30) && ((check_car_s-car_s) < closestDist_s))
                       {
+                           closestDist_s = (check_car_s - car_s);
                            too_close = true;
                            eval_lane_change = true;
                            keep_lane = false;
-                      }
-                      //very very close -some car might have done a lane change
-                      if((check_car_s > car_s) && ((check_car_s - car_s) < 20))
-                      {
-                           ref_vel -= .224;
-                      }
-                      if((check_car_s > car_s) && ((check_car_s - car_s) < 10))
-                      {
-                           ref_vel -= .224;
+                           
+		              //very very close -some car might have done a lane change
+		              if((check_car_s - car_s) < 20)
+		              {
+		                   //match that cars in the speed
+		                   ref_vel = check_speed*2.237 - 5;
+		              }
+		              else 
+		              {
+		                   ref_vel = check_speed*2.237;
+		              }
                       }
 		   }
 		}
                 
-                if(too_close)
-                {
-                   ref_vel -= .224;
-                }
-                else if(ref_vel < 49.5)
-                {
-                   ref_vel += .224;
-                }
-                 
                 
-                if(int(car_d/4) != curr_lane)
+                //check the lane change completion if initiated
+                if( (abs(car_d - (curr_lane*4+2)) > 3.75) && eval_lane_change == true)
                 {
                     eval_lane_change = false;
                     keep_lane = true;
@@ -328,6 +326,8 @@ int main() {
           	double ref_y = car_y;
                 double ref_yaw = deg2rad(car_yaw);
                 
+                //decide on the possible lanes (hence trajectorires) to be evaluated for future
+                //if keep_lane is true then only the current lane and trajectory corresponding to it is evaluated 
                 vector<int> possible_lanes;
                 if(keep_lane == false)
                     possible_lanes = find_possible_lanes(lane); 
@@ -347,6 +347,8 @@ int main() {
           	vector<double> ptsx[num_poss_lanes];
           	vector<double> ptsy[num_poss_lanes];
 
+                //decide on the pivot points for the trajectories created out of spines.
+                // if history exists, htne take the last two points     
           	if(prev_size < 2)
           	{
           		double prev_car_x = car_x - cos(car_yaw);
@@ -377,6 +379,8 @@ int main() {
           		  ptsy[i].push_back(previous_path_y[prev_size-2]);
           		  ptsy[i].push_back(previous_path_y[prev_size-1]);
                         }
+                        //calculate the car speed   
+                        car_speed = (sqrt((ref_x-ref_x_prev)*(ref_x-ref_x_prev)+(ref_y-ref_y_prev)*(ref_y-ref_y_prev))/.02)*2.237;
           	}
 		
 
@@ -384,25 +388,24 @@ int main() {
           	vector<double> next_wp1[num_poss_lanes];
           	vector<double> next_wp2[num_poss_lanes];
 
+                //add way points at distances of 30, 60, 90 in different possible lanes as achor points for spline creation
        		for(int i = 0; i < num_poss_lanes; i++)
                 {
                      next_wp0[i] = getXY(car_s+30,(2+4*possible_lanes[i]),map_waypoints_s,map_waypoints_x,map_waypoints_y);
                      next_wp1[i] = getXY(car_s+60,(2+4*possible_lanes[i]),map_waypoints_s,map_waypoints_x,map_waypoints_y);
                      next_wp2[i] = getXY(car_s+90,(2+4*possible_lanes[i]),map_waypoints_s,map_waypoints_x,map_waypoints_y);
-                }
 
-       		for(int i = 0; i < num_poss_lanes; i++)
-                {
-              	  ptsx[i].push_back(next_wp0[i][0]);
-          	  ptsx[i].push_back(next_wp1[i][0]);
-          	  ptsx[i].push_back(next_wp2[i][0]);
+		      	  ptsx[i].push_back(next_wp0[i][0]);
+		  	  ptsx[i].push_back(next_wp1[i][0]);
+		  	  ptsx[i].push_back(next_wp2[i][0]);
 
-          	  ptsy[i].push_back(next_wp0[i][1]);
-          	  ptsy[i].push_back(next_wp1[i][1]);
-          	  ptsy[i].push_back(next_wp2[i][1]);
+		  	  ptsy[i].push_back(next_wp0[i][1]);
+		  	  ptsy[i].push_back(next_wp1[i][1]);
+		  	  ptsy[i].push_back(next_wp2[i][1]);
                 }
 
 
+                //make the rotation and translation to the ref-x and ref-y to make the math easier for spline formulation
           	for(int k = 0; k < num_poss_lanes; k++)
                   for (int i = 0; i < ptsx[k].size(); i++ )
           	  {
@@ -414,13 +417,13 @@ int main() {
 			ptsy[k][i] = (shift_x *sin(0-ref_yaw)+shift_y*cos(0-ref_yaw));
           	  }
           	
-          	//create those many possible splines
+          	//create those many possible splines for those many possible trajectories for creation and evaluation
           	tk::spline s[num_poss_lanes];
           	for(int k = 0; k < num_poss_lanes; k++)
             	  s[k].set_points(ptsx[k],ptsy[k]);
 
           	
-                
+                //consider the previous path values for all the trajectories
           	for(int i = 0; i < previous_path_x.size(); i++)
           	{
                    for(int k = 0; k < num_poss_lanes; k++)
@@ -429,6 +432,18 @@ int main() {
           		next_y_vals[k].push_back(previous_path_y[i]);
                    }
           	}
+
+
+                if(ref_vel > car_speed)
+		{
+   		   car_speed+=.224;
+		}
+		else if(ref_vel < car_speed)
+		{
+	     	   car_speed-=.224;
+                }  
+                cout << "ref_vel : " << ref_vel << "\n";
+                cout << "car_speed : "<< car_speed << "\n"; 
                 //calculate all possible trajectectories
                 for(int k = 0; k < num_poss_lanes; k++)
                 {
@@ -438,7 +453,7 @@ int main() {
 
 
           	  double x_add_on = 0;
-                  car_speed = ref_vel;
+                  //car_speed = ref_vel;
 		  for (int i = 1; i <= 50-previous_path_x.size(); i++) 
                   {
 			double N = (target_dist/(.02*car_speed/2.24));
@@ -462,13 +477,13 @@ int main() {
 		  }
                 }
 
-                //Now we need to choose between the best trajectories
-                //by adding cost function looking for collisions
+                //Now we need to choose best between the trajectories
+                //by adding cost function and looking for possible collisions
 
                 int bestLaneIndex = 0;
                 double laneCost[num_poss_lanes];
 
-                double preference_for_lanes[3] = {100, 110, 130};
+                double preference_for_lanes[3] = {100, 100, 100};//{100, 110, 130};
                 
                 for(int k = 0; k < num_poss_lanes; k++)
                 {   
@@ -487,13 +502,23 @@ int main() {
 	  			double vy = sensor_fusion[i][4];
 	  			double check_speed = sqrt(vx*vx+vy*vy);
 	  			double check_car_s = sensor_fusion[i][5];
-	  			check_car_s+=((double)prev_size*.02*check_speed);
+	  			check_car_s+=((double)50/*prev_size*/*.02*check_speed);
 	  			//check s values greater than mine and s gap
-	  			if( ((check_car_s-car_s) > -10) && ((check_car_s-car_s) < 20) )
+	  			if( ((check_car_s-car_s) > -10) && ((check_car_s-car_s) < 20) && (possible_lanes[k] != curr_lane))
 	  			{   //Not safe
                                     //penalise possible collisions
-		                    laneCost[k] += 200.0;///abs(check_car_s-car_s);
+		                    laneCost[k] += 2000.0/abs(check_car_s-car_s);
+
+                                    //if the car is behind check the speed, if the speed is greater than egoSpeed, then penalize
+                                    if((check_speed-car_speed) > 5  && (sensor_fusion[i][5] < car_s)) 
+		                       laneCost[k] += 2000.0;///abs(check_car_s-car_s);
 		                }
+                                //else if ( ((check_car_s-car_s) < 10) && (possible_lanes[k] != curr_lane))
+	  			//{   //Not safe
+                                //    //penalise possible collisions
+		                //    laneCost[k] += 2000.0;///abs(check_car_s-car_s);
+		                //}
+	  			
                          }
                     }
                     
@@ -509,9 +534,11 @@ int main() {
                         double vy = (curry-prevy)/0.02;
                         double curr_vel = sqrt(vx*vx+vy*vy);
                         vel.push_back(curr_vel);
+                        // Penalize the trajectory if the velocity is exceeding the limit
                         //if(curr_vel > 50*2.24)
                         //    laneCost[k] += 1000.0;
                     }
+                    //find instantaneous acceleration along the trajectory
                     vector<double> accel;
                     double prev_vel = vel[0];
                     for(int i = 1; i < vel.size(); i++)
@@ -519,21 +546,24 @@ int main() {
                         double curr_vel = vel[i];
                         double acc = (curr_vel - prev_vel)/0.02;
                         accel.push_back(acc);
+                        // Penalize the trajectory if the acceleration is exceeding the limit
                         //if(abs(acc) > 10)
                         //    laneCost[k] += 1000.0;
                     }
+                    //find instantaneous jerk along the trajectory
                     double prev_acc = accel[0];
                     for(int i = 1; i < accel.size(); i++)
                     {   
                         double curr_acc = accel[i];
                         double jerk = (curr_acc - prev_acc)/0.02;
-                        
+                        // Penalize the trajectory if the jerk is exceeding the limit                        
                         //if(abs(jerk) > 10)
                         //    laneCost[k] += 1000.0;
                     }
                         
                 }
-
+                
+                //find the trajectory with the least cost/penalty
                 double minCost = 100000000.0;
                 for(int k = 0; k < num_poss_lanes; k++)
                 {
