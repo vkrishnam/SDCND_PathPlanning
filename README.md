@@ -60,13 +60,21 @@ A really helpful resource for doing this project and creating smooth trajectorie
 
 ---
 ## Overall Approach for the solution 
-Follows the approach discussed in the Project walkthrough Q&A Video, but improvises with lane change with the logic of evaluation of multiple trajectories and their costs with different cost functions.  
+Broadly follows the approach discussed in the Project walkthrough Q&A Video, but improvises the lane change with the logic of evaluation of multiple trajectories and their costs with different cost functions.
 
-Always looks for obstacles/vehicle ahead of the ego in the current lane from sensor fusion data. Else keep the current lane.
-If an obstacle is found, reduce the ego vehicle speed to the speed of the vehicle ahead as the reference. Also enable the lane change evaluation (lane_change_evalaution state) logic.
+Broadly the Path Planning has two states: _Keep Lane_ or _Change Lane_.
+
+
+Always looks for obstacles/vehicle ahead of the ego in the current lane from sensor fusion data. If no vehicle with in 30 meters vicinity in the forward direction, keep the current lane.
+If an obstacle/vehicle is found ahead in short distance, reduce the ego vehicle speed to the speed of the vehicle ahead as the reference. 
+Also enable the lane change evaluation (lane_change_evalaution state) logic.
 If lane change evaluation logic is enabled, every time we see if lane change is done to go back to lane keep state and disable lane change evaluation logic.
 If lane change evaluation logic is enabled, the multiple possible lanes are evaluated, or else only the current lane is evaluated (lane keep state).
-When lane change logic is enabled, mutliple possble lanes are considered and trajectories are created with fitting different splines. Later on each of those trajectories are interpolated for the path points whose distance is covered in 0.02sec given the current vehicle speed. These diff paths are further evaluated for possible collisions etc using different cost functions. Finally the path points whose cost is lowest is choosen and there by lane change is executed. When lane change is completed and detected, the FSM moves to keep_lane state.
+When lane change logic is enabled, mutliple possble lanes are considered and trajectories are created with fitting different splines. 
+
+Later on each of those trajectories are interpolated for the path points whose distance is covered in 0.02sec given the current vehicle speed. 
+
+These different paths are further evaluated for possible collisions etc using different cost functions. Finally the path points whose cost is lowest is choosen and there by lane change is executed. When lane change is completed and detected, the FSM moves to keep_lane state.
 
 
 ## Dependencies
