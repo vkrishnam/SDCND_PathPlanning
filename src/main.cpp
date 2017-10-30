@@ -1,3 +1,4 @@
+
 #include <fstream>
 #include <math.h>
 #include <uWS/uWS.h>
@@ -339,13 +340,13 @@ int main() {
 
 
 
-          	vector<double> next_x_vals[num_poss_lanes];
-          	vector<double> next_y_vals[num_poss_lanes];
+          	vector<double> next_x_vals[3];//[num_poss_lanes];
+          	vector<double> next_y_vals[3];//[num_poss_lanes];
 
                 // Create a list of widely spaced (x,y) waypoints, evenly spaced at 30m
 		// later we will interpolate these waypoints witha spline and fill it with more points that control the vehicle tightly
-          	vector<double> ptsx[num_poss_lanes];
-          	vector<double> ptsy[num_poss_lanes];
+          	vector<double> ptsx[3];//[num_poss_lanes];
+          	vector<double> ptsy[3];//[num_poss_lanes];
 
                 //decide on the pivot points for the trajectories created out of spines.
                 // if history exists, htne take the last two points     
@@ -384,9 +385,9 @@ int main() {
           	}
 		
 
-          	vector<double> next_wp0[num_poss_lanes];
-          	vector<double> next_wp1[num_poss_lanes];
-          	vector<double> next_wp2[num_poss_lanes];
+          	vector<double> next_wp0[3];//[num_poss_lanes];
+          	vector<double> next_wp1[3];//[num_poss_lanes];
+          	vector<double> next_wp2[3];//[num_poss_lanes];
 
                 //add way points at distances of 30, 60, 90 in different possible lanes as achor points for spline creation
        		for(int i = 0; i < num_poss_lanes; i++)
@@ -418,7 +419,7 @@ int main() {
           	  }
           	
           	//create those many possible splines for those many possible trajectories for creation and evaluation
-          	tk::spline s[num_poss_lanes];
+          	tk::spline s[3];//[num_poss_lanes];
           	for(int k = 0; k < num_poss_lanes; k++)
             	  s[k].set_points(ptsx[k],ptsy[k]);
 
@@ -481,7 +482,7 @@ int main() {
                 //by adding cost function and looking for possible collisions
 
                 int bestLaneIndex = 0;
-                double laneCost[num_poss_lanes];
+                double laneCost[3];//num_poss_lanes];
 
                 double preference_for_lanes[3] = {100, 100, 100};//{100, 110, 130};
                 
