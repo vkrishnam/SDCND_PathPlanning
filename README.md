@@ -1,5 +1,11 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
+
+
+
+[//]: # (Image References)
+
+[image1]: ./StateDiagram.PNG "StateDiagram"
    
 
 ### Goals
@@ -64,11 +70,14 @@ Broadly follows the approach discussed in the Project walkthrough Q&A Video, but
 
 Broadly the Path Planning has two states: _Keep Lane_ or _Change Lane_.
 
+**_State Diagram_**
+![alt text][image1]
+
 
 Always looks for obstacles/vehicle ahead of the ego in the current lane from sensor fusion data. If no vehicle with in 30 meters vicinity in the forward direction, keep the current lane.
 If an obstacle/vehicle is found ahead in short distance, reduce the ego vehicle speed to the speed of the vehicle ahead as the reference. 
 Also enable the lane change evaluation (lane_change_evalaution state) logic.
-If lane change evaluation logic is enabled, every time we see if lane change is done to go back to lane keep state and disable lane change evaluation logic.
+Every time we see if lane change is done to go back to lane keep state and disable lane change evaluation logic.
 If lane change evaluation logic is enabled, the multiple possible lanes are evaluated, or else only the current lane is evaluated (lane keep state).
 When lane change logic is enabled, mutliple possble lanes are considered and trajectories are created with fitting different splines. 
 
